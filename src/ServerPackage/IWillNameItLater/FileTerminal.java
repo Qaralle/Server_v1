@@ -38,7 +38,7 @@ public class FileTerminal extends Terminal {
         removeAnyByNationality=new RemoveAnyByNationality(new FileTransporter(scan));
         countLessThanLocation=new CountLessThanLocation(new FileTransporter(scan));
         filterStartsWithName=new FilterStartsWithName(new FileTransporter(scan));
-        save=new Save();
+        //save=new Save();
         bufferMap = new HashMap<>();
 
         executeScript = new ExecuteScript(new FileTransporter(scan));

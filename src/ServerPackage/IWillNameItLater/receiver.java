@@ -5,6 +5,7 @@ import packet.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.stream.Stream;
 
 /**
  * Interface, реализуемый классом CollectionUnit, выступает как получатель/реализатор команд от пользователя
@@ -21,7 +22,7 @@ public interface receiver {
     void removeAnyByNationality(Country nationality); //разработчики осуждают нацизм в любых его проявлениях
     void countLessThanLocation(String namel);
     void filterStartsWithName(String name);
-    void save() throws IOException;
+    //void save() throws IOException;
     void executeScript(String file_name) throws FileNotFoundException;
     void exit();
     void history();
@@ -32,4 +33,6 @@ public interface receiver {
     void addCommandToHistory(String userCommand);
     String getResponse();
     void setResponse(String str);
+    void setLogin(String login);
+    String getLogin();
 }

@@ -34,7 +34,7 @@ public abstract class Terminal {
     protected CommandWithPars removeAnyByNationality;
     protected CommandWithPars countLessThanLocation;
     protected CommandWithPars filterStartsWithName;
-    protected Command save;
+    //protected Command save;
     protected ExecuteScript executeScript;
     protected Command exit;
     protected Command history;
@@ -183,13 +183,13 @@ public abstract class Terminal {
                                 SystemOut.addText("Неверный синтаксис команды. Используйте help.");
                             }
                             break;
-                        case ("save"):
+                        /*case ("save"):
                             if (userCommand_.length==1) {
                                 save.execute(res);
                             }else {
                                 SystemOut.addText("Неверный синтаксис команды. Используйте help.");
                             }
-                            break;
+                            break;*/
                         case ("execute_script"):
                             if(userCommand_.length == 2) {
                                 bufferMap.put("file_name", userCommand_[1].trim());

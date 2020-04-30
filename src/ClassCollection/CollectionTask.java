@@ -5,9 +5,9 @@ import ServerPackage.PersonList;
 import packet.*;
 import ServerPackage.IWillNameItLater.ConsoleTransporter;
 import ServerPackage.Сommands.*;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
+//import com.google.gson.Gson;
+//import com.google.gson.JsonSyntaxException;
+//import com.google.gson.reflect.TypeToken;
 
 import javax.swing.plaf.nimbus.State;
 import java.io.File;
@@ -40,7 +40,7 @@ public class CollectionTask {
     private CommandWithPars removeAnyByNationality;
     private CommandWithPars countLessThanLocation;
     private CommandWithPars filterStartsWithName;
-    private Command save;
+    //private Command save;
     private ExecuteScript executeScript;
     private Command exit;
     private Command history;
@@ -81,7 +81,7 @@ public class CollectionTask {
         removeAnyByNationality=new RemoveAnyByNationality(new ConsoleTransporter());
         countLessThanLocation=new CountLessThanLocation(new ConsoleTransporter());
         filterStartsWithName=new FilterStartsWithName(new ConsoleTransporter());
-        save=new Save();
+        //save=new Save();
         executeScript = new ExecuteScript(new ConsoleTransporter());
         exit=new Exit();
         history=new History();
@@ -102,7 +102,7 @@ public class CollectionTask {
         commandMap.put("remove_any_by_nationality", removeAnyByNationality);
         commandMap.put("remove_head", removeHead);
         commandMap.put("remove_by_id", remove_by_id);
-        commandMap.put("save", save);
+        //commandMap.put("save", save);
         commandMap.put("show", show);
         commandMap.put("count_less_than_location", countLessThanLocation);
     }
@@ -158,6 +158,7 @@ public class CollectionTask {
             while(resultSet.next()){
                 p = new Person();
                 p.setID(resultSet.getInt("id"));
+                p.setCreator(resultSet.getString("creator"));
                 String name = resultSet.getString("name");
                 Coordinates coo = new Coordinates(resultSet.getFloat("x"), resultSet.getDouble("y"));
                 double height = resultSet.getDouble("height");

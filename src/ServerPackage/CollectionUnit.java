@@ -7,17 +7,16 @@ import ServerPackage.FactoryPackage.LocationMaker;
 import ServerPackage.FactoryPackage.ObjectClassMaker;
 import ServerPackage.IWillNameItLater.FileTerminal;
 import ServerPackage.IWillNameItLater.receiver;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+//import com.google.gson.Gson;
+//import com.google.gson.GsonBuilder;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.Iterator;
 import java.util.Scanner;
 import java.util.stream.Stream;
 
@@ -46,6 +45,7 @@ public class CollectionUnit implements receiver {
 
     private BDconnector bDconnector;
     private Connection con;
+    private String login;
 
 
     public CollectionUnit(CollectionTask CT, BDconnector bDconnector){
@@ -71,6 +71,7 @@ public class CollectionUnit implements receiver {
         response="";
         per = createPerson(x_, y_, x1_, y1_, name1_);
         per.setEverything(name_, coo, height_, eyeColor_, hairColor_, nationality_, loc);
+        per.setCreator(login);
 
         np.PersonReplace(per);
         fp.PersonReplace(per);
@@ -121,24 +122,35 @@ public class CollectionUnit implements receiver {
     public void update(long id, String nameP_, Double height_, Color eyeColor_, Color hairColor_, Country nationality_, Float x_, Double y_, Float x1_, double y1_, String nameL_, Integer index) {
         response="";
         per = createPerson(x_, y_, x1_, y1_, nameL_);
+        try {
+            PreparedStatement statement = con.prepareStatement("select creator from collection where id=?");
+            statement.setLong(1, id);
+            statement.execute();
+            while (statement.getResultSet().next()){
+                if(statement.getResultSet().getString("creator").equals(login)){
+                    if(index>=0){
+                        try {
+                            updateBD(index+1, nameP_, height_, eyeColor_, hairColor_, nationality_, coo.getX(), coo.getY(), loc.getX(), loc.getY(), loc.getName());
+                            ct.GetCollection().get(index).setEverything(nameP_, coo, height_, eyeColor_, hairColor_, nationality_, loc);
+                        } catch (SQLException e) { e.printStackTrace(); }
 
 
-        if(index>=0){
-            try {
-               updateBD(index+1, nameP_, height_, eyeColor_, hairColor_, nationality_, coo.getX(), coo.getY(), loc.getX(), loc.getY(), loc.getName());
-                ct.GetCollection().get(index).setEverything(nameP_, coo, height_, eyeColor_, hairColor_, nationality_, loc);
-            } catch (SQLException e) { e.printStackTrace(); }
-
-
-        }else {
-            try {
-                updateBD(id, nameP_, height_, eyeColor_, hairColor_, nationality_, coo.getX(), coo.getY(), loc.getX(), loc.getY(), loc.getName());
-                personStream = ct.GetCollection().stream();
-                personStream.filter(person -> person.getId() == id).forEach(person -> person.setEverything(nameP_, coo, height_, eyeColor_, hairColor_, nationality_, loc));
-            } catch (SQLException e) { e.printStackTrace(); }
+                    }else {
+                        try {
+                            updateBD(id, nameP_, height_, eyeColor_, hairColor_, nationality_, coo.getX(), coo.getY(), loc.getX(), loc.getY(), loc.getName());
+                            personStream = ct.GetCollection().stream();
+                            personStream.filter(person -> person.getId() == id).forEach(person -> person.setEverything(nameP_, coo, height_, eyeColor_, hairColor_, nationality_, loc));
+                        } catch (SQLException e) { e.printStackTrace(); }
+                    }
+                    response = "Обновлен объект с id = " + id;
+                }else response = "У вас нет доступа к данному объекту";
+                SystemOut.addText(response);
             }
-        response = "Обновлен объект с id = " + id;
-        SystemOut.addText(response);
+            statement.close();
+        }catch (SQLException ex){ ex.printStackTrace();}
+
+
+
     }
 
     /**
@@ -148,12 +160,20 @@ public class CollectionUnit implements receiver {
     public void clear() {
         response="";
         try {
-            PreparedStatement stmt = con.prepareStatement("delete from collection");
+            PreparedStatement stmt = con.prepareStatement("delete from collection where creator=?");
+            stmt.setString(1, login);
             stmt.executeUpdate();
             stmt.close();
-            ct.GetCollection().clear();
+            Iterator<Person> it = ct.GetCollection().iterator();
+            while (it.hasNext()){
+                Person p = it.next();
+                if(p.getCreator().equals(login)) {
+                    it.remove();
+                }
+            }
+
         } catch (SQLException e) { e.printStackTrace(); }
-        response = "Коллекция очищена.";
+        response = "Из коллекции удалены все элементы, созданные вами";
         SystemOut.addText(response);
     }
 
@@ -164,20 +184,19 @@ public class CollectionUnit implements receiver {
     public void remove_by_id(long id) {
         response="";
         try {
-            PreparedStatement stmt = con.prepareStatement("delete from collection where id =?");
+            PreparedStatement stmt = con.prepareStatement("delete from collection where id =? and creator =?");
             stmt.setLong(1, id);
+            stmt.setString(2, login);
             stmt.executeUpdate();
             stmt.close();
             personStream = ct.GetCollection().stream();
-            if(personStream.peek(person -> per = person).anyMatch(person -> person.getId() == id)) {
+            if(personStream.peek(person -> per = person).filter(person -> person.getCreator().equals(login)).anyMatch(person -> person.getId() == id)) {
                 ct.GetCollection().remove(per);
                 response = "Удален объект с айди = "+id;
-            }else response = "Объекта с таким id нет";
+            }else response = "Не удалось удалить объект";
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-
         SystemOut.addText(response);
     }
 
@@ -188,16 +207,18 @@ public class CollectionUnit implements receiver {
     public void removeHead() {
         response="";
         try {
-            PreparedStatement stmt = con.prepareStatement("delete from collection where id = (select min (id) from collection)");
-            stmt.executeUpdate();
-            stmt.close();
             if (ct.GetCollection().size()>0) {
-                response = "Name: " + ct.GetCollection().get(0).getName() +
-                        " id: " + ct.GetCollection().get(0).getId() +
-                        " date: " + ct.GetCollection().get(0).getData() +
-                        " hair color: " + ct.GetCollection().get(0).getHairColor() +
-                        " location: " + ct.GetCollection().get(0).location.getName();
-                ct.GetCollection().remove(0);
+                if(ct.GetCollection().get(0).getCreator().equals(login)) {
+                    PreparedStatement stmt = con.prepareStatement("delete from collection where id = (select min (id) from collection)");
+                    stmt.executeUpdate();
+                    stmt.close();
+                    response = "Name: " + ct.GetCollection().get(0).getName() +
+                            " id: " + ct.GetCollection().get(0).getId() +
+                            " date: " + ct.GetCollection().get(0).getData() +
+                            " hair color: " + ct.GetCollection().get(0).getHairColor() +
+                            " location: " + ct.GetCollection().get(0).location.getName();
+                    ct.GetCollection().remove(0);
+                }else response = "У вас нет доступа к данному объекту";
             }else{
                 response = "Коллекция уже пуста";
             }
@@ -214,15 +235,16 @@ public class CollectionUnit implements receiver {
     public void removeAnyByNationality(Country nationality) {
         response="";
         try {
-            PreparedStatement stmt = con.prepareStatement("delete from collection where country =? and id = (select min (id) from collection)");
+            PreparedStatement stmt = con.prepareStatement("delete from collection where country =? and id = (select min (id) from collection) and creator = ?");
             stmt.setString(1, String.valueOf(nationality));
+            stmt.setString(2, login);
             stmt.executeUpdate();
             stmt.close();
             personStream = ct.GetCollection().stream();
-            if(personStream.peek(person -> per = person).anyMatch(person -> person.getNationality() == nationality)) {
+            if(personStream.peek(person -> per = person).filter(person -> person.getCreator().equals(login)).anyMatch(person -> person.getNationality() == nationality)) {
                 ct.GetCollection().remove(per);
                 response = "Удален объект с национальностью = "+nationality;
-            }else response = "Объекта с такой национальностью нет";
+            }else response = "Вашего объекта с такой национальностью нет";
         }catch (SQLException ex) {ex.printStackTrace();}
         SystemOut.addText(response);
     }
@@ -259,7 +281,7 @@ public class CollectionUnit implements receiver {
      * реализация команды save
      * @throws IOException файл не найден
      */
-    @Override
+/*    @Override
     public void save() throws IOException {
         response="";
         FileOutputStream fileOutputStream = new FileOutputStream(file_name);
@@ -276,7 +298,7 @@ public class CollectionUnit implements receiver {
         response = "Коллекция сохранена в файл";
         fileOutputStream.close();
         SystemOut.addText(response);
-    }
+    }*/
 
     /**
      * реализация команды execute_script
@@ -321,6 +343,7 @@ public class CollectionUnit implements receiver {
         response="";
         per = createPerson(x_, y_, x1_, y1_, name1_);
         per.setEverything(name_, coo, height_, eyeColor_, hairColor_, nationality_, loc);
+        per.setCreator(login);
 
         if (ct.GetCollection().size() != 0) {
             ct.CollectionSort();
@@ -393,9 +416,15 @@ public class CollectionUnit implements receiver {
     @Override
     public void setResponse(String str) {response = str;}
 
+    @Override
+    public void setLogin(String login) { this.login = login;}
+
+    @Override
+    public String getLogin() { return login; }
+
     private void addToBD(String name_, Double height_, Color eyeColor_, Color hairColor_, Country nationality_, Float x_, Double y_, Float x1_, double y1_, String name1_) throws SQLException {
-        PreparedStatement stmt = con.prepareStatement("INSERT INTO collection (name, x, y, height, eyecolor, haircolor, locationname, locationx, locationy, country)" +
-                " VALUES (?,?,?,?,?,?,?,?,?,?)");
+        PreparedStatement stmt = con.prepareStatement("INSERT INTO collection (name, x, y, height, eyecolor, haircolor, locationname, locationx, locationy, country, creator)" +
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?)");
         stmt.setString(1, name_);
         stmt.setFloat(2, x_);
         stmt.setDouble(3, y_);
@@ -406,6 +435,7 @@ public class CollectionUnit implements receiver {
         stmt.setFloat(8, x1_);
         stmt.setDouble(9, y1_);
         stmt.setString(10, String.valueOf(nationality_));
+        stmt.setString(11, login);
         stmt.executeUpdate();
         stmt.close();
     }

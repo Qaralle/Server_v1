@@ -10,6 +10,7 @@ import ServerPackage.IWillNameItLater.WrongTypeOfFieldException;
 import ServerPackage.IWillNameItLater.receiver;
 
 
+import javax.xml.crypto.Data;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -40,7 +41,6 @@ public class ServerMain
 
     private static String ACCESS;
 
-
     private static Log4J2 SustemOut = new Log4J2(System.out);
     private static CollectionTask collectionTask;
     private static receiver CU;
@@ -57,6 +57,7 @@ public class ServerMain
     private static int saltLength = 64;     // salt length in bytes
     private static BDconnector bc;
     private static Object sync;
+    private static Object sync2;
     private static SCryptPasswordEncoder sCryptPasswordEncoder = new SCryptPasswordEncoder(
             cpuCost,
             memoryCost,
@@ -68,10 +69,9 @@ public class ServerMain
 
 
         sync = new Object();
+        sync2 = new Object();
         bc =new BDconnector();
-    /*try(Connection con = bc.getCon(); Statement statement = con.createStatement()) {
-        statement.executeUpdate("insert into collection (name) values ('Valera')");
-    }*/
+
 
         try {
 
@@ -88,13 +88,10 @@ public class ServerMain
                 collectionTask.load(bc);
                 CU = new CollectionUnit(collectionTask, bc);
             }catch (NullPointerException ex) {
-            /*collectionTask.load("C:\\Users\\proge\\IdeaProjects\\test\\src\\PersonClassTest.json");
-            CU = new CollectionUnit(collectionTask, "C:\\Users\\proge\\IdeaProjects\\test\\src\\PersonClassTest.json");*/
-            /*collectionTask.load("C:\\Users\\user\\Documents\\Lab7\\Server\\src\\PersonClassTest.json");
-            CU = new CollectionUnit(collectionTask, "C:\\Users\\user\\Documents\\Lab7\\Server\\src\\PersonClassTest.json");*/
                 SustemOut.println("Все очень плохо");
             }
-            ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
+            ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
+            ThreadPoolExecutor sender = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
 
             while (true) {
                 selector.select();
@@ -111,19 +108,26 @@ public class ServerMain
                         //executor.awaitTermination(1, TimeUnit.HOURS);
 
                         ColThread colt = new ColThread("Исполнитель",  channel);
-                        colt.start();
+
 
                         //ее надо создавть только 5 раз
 
                         RequestHandler rh = new RequestHandler("Приниматель",  selector, channel);
 
 
+                        Transmitter transmitter = new Transmitter("Отправлятель", channel);
                         executor.execute(rh);
-
-                            //executor.shutdown();
+                        colt.start();
                         colt.join();
-                            str = SustemOut.sendTxt() + "\n$";
-                            printsmth(channel, from);
+                        sender.execute(transmitter);
+
+                        //executor.shutdown();
+
+
+
+
+                            /*str = SustemOut.sendTxt() + "\n$";
+                            printsmth(channel, from);*/
 
                     }
                     iter.remove();
@@ -167,7 +171,7 @@ public class ServerMain
             }
         }
         if (BDCHECKING==false){
-            SustemOut.addText("Неверный логи или пароль");
+            SustemOut.addText("Неверный логин или пароль");
             str = SustemOut.sendTxt()+"\n$";
             //printsmth(channel,from);
 
@@ -181,6 +185,7 @@ public class ServerMain
 
 
     //hui ego znaet tip perepisivaem 4to poluchii v drugoi buffer
+    //da eto kostyl shob ne bilo lishnih nullov
     private static ByteBuffer getFinalBuffer(ByteBuffer buffer, ByteBuffer finalBuffer){
         for (int i = 0; i < buffer.position(); ++i){
             finalBuffer.put(i, buffer.get(i));
@@ -243,7 +248,7 @@ public class ServerMain
     }
 
 
-    //dlya rapoti s kollekciei
+    //dlya raboti s kollekciei
     private synchronized static void action(ByteBuffer buffer,ByteBuffer finalBuffer, DatagramChannel channel,SocketAddress from) throws IOException, InterruptedException {
 
 
@@ -252,7 +257,7 @@ public class ServerMain
             buffer.flip();
             CommandA cam = deserialize(finalBuffer_.array());
             String val = cam.toString()+cam.getStringToSend();
-
+            CU.setLogin(cam.getLogin());
             if (isRight){
                 val=cam.gettoUpdate_b()+cam.getStringToSend();
                 isRight=false;
@@ -325,6 +330,7 @@ public class ServerMain
 
     //tut o4evidno
     private static CommandA deserialize(byte[] data){
+
         try {
             ObjectInputStream iStream = new ObjectInputStream(new ByteArrayInputStream(data));
             CommandA obj = (CommandA) iStream.readObject();
@@ -377,7 +383,7 @@ public class ServerMain
                             buffer.clear();
                             SustemOut.print("----Соеденение с клментом----");
                             from = channel.receive(buffer);
-                            sync.notify();
+                            //sync.notify();
                             SustemOut.print("----Было успешно установлено----");
                         }
                 }
@@ -390,13 +396,15 @@ public class ServerMain
         }
     }
 
-    class Transmitter implements Runnable
+    static class Transmitter implements Runnable
     {
         private String name;
+        private DatagramChannel channel;
 
-        public Transmitter(String name)
+        public Transmitter(String name, DatagramChannel chan)
         {
             this.name = name;
+            this.channel = chan;
         }
 
         public String getName() {
@@ -408,11 +416,13 @@ public class ServerMain
         {
             try
             {
-                Long duration = (long) (Math.random() * 10);
-                System.out.println("Doing a task during : " + name);
-                TimeUnit.SECONDS.sleep(duration);
+                        str = SustemOut.sendTxt()+"\n$";
+                        SustemOut.clear();
+                        ByteBuffer buf = ByteBuffer.wrap(str.getBytes());
+                        channel.send(buf, from);
+                        CU.setResponse("");
             }
-            catch (InterruptedException e)
+            catch (IOException e)
             {
                 e.printStackTrace();
             }
@@ -428,14 +438,16 @@ public class ServerMain
         {
             super(name);
             this.channel=channel_;
+            System.out.println("Макс лох");
         }
 
         public void run() {
 
-
+            synchronized (sync2) {
             synchronized (sync) {
                 try {
-                    sync.wait();
+                    sync.wait(500);
+                    System.out.println("qwe");
                     ByteBuffer finalBuffer = ByteBuffer.allocate(buffer.position());
                     if (getNameCom(buffer, finalBuffer, from).equals("login")) {
                         if (getAccess(buffer, finalBuffer, from).equals("DEFAULT")) {
@@ -495,11 +507,12 @@ public class ServerMain
                         AUTHORIZATIONCHECK = false;
 
                     }
+                    //sync2.notify();
                     //okonchaiya obrabotci zaprosa
                     //start otveta clentu
-
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                }
             }
             }
         }

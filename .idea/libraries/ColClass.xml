@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="ColClass">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../ColClass_v1/out/artifacts/ColClass_jar/ColClass.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
