@@ -88,7 +88,7 @@ public class ServerMain
                 collectionTask.load(bc);
                 CU = new CollectionUnit(collectionTask, bc);
             }catch (NullPointerException ex) {
-                SustemOut.println("Все очень плохо");
+                System.out.println("ыаы");
             }
             ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
             ThreadPoolExecutor sender = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
