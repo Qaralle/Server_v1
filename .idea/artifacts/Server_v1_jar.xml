@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Server_v1:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Server_v1_jar</output-path>
+    <root id="archive" name="Server_v1.jar">
+      <element id="module-output" name="Server_v1" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../../Libraries_Java/commons-logging-1.1.1-api.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../ColClass_v1/out/artifacts/ColClass_jar/ColClass.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../../Libraries_Java/postgresql-42.2.12 (1).jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../../Libraries_Java/bcprov-jdk15on-1.65.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../../Libraries_Java/spring-security-core-5.2.1.RELEASE.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../../Libraries_Java/jsch-0.1.54.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

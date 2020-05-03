@@ -38,6 +38,7 @@ public class ServerMain
     private static ReentrantLock lock;  // блокировка
    private static Condition cond;  // условие блокировки
 
+    private static Map<String, SocketAddress> addressMap = new HashMap<>();
 
     private static String ACCESS;
 
@@ -47,8 +48,10 @@ public class ServerMain
     private static String str;
     private static boolean isRight=false;
     private static List<String> ConnectionKeies= new ArrayList<>();
-    private static SocketAddress from;
-    private static ByteBuffer buffer;
+    private static ThreadLocal<SocketAddress> socketAddress=new ThreadLocal<>();
+    //private static ThreadLocal<ByteBuffer> buf = new ThreadLocal<>();
+    private static ByteBuffer buf;
+    private static ByteBuffer checkBuffer;
 
     private static int cpuCost = (int) Math.pow(2, 14); // factor to increase CPU costs
     private static int memoryCost = 8;      // increases memory usage
@@ -57,7 +60,8 @@ public class ServerMain
     private static int saltLength = 64;     // salt length in bytes
     private static BDconnector bc;
     private static Object sync;
-    private static Object sync2;
+    private static Object valera;
+    private static Transmitter transmitter;
     private static SCryptPasswordEncoder sCryptPasswordEncoder = new SCryptPasswordEncoder(
             cpuCost,
             memoryCost,
@@ -69,9 +73,8 @@ public class ServerMain
 
 
         sync = new Object();
-        sync2 = new Object();
+        valera = new Object();
         bc =new BDconnector();
-
 
         try {
 
@@ -80,7 +83,7 @@ public class ServerMain
             chan.configureBlocking(false);
             Selector selector = Selector.open();
             chan.register(selector, SelectionKey.OP_READ);
-            buffer = ByteBuffer.allocate(4 * 1024);
+            checkBuffer = ByteBuffer.allocate(4 * 1024);
 
 
             collectionTask = new CollectionTask();
@@ -92,48 +95,51 @@ public class ServerMain
             }
             ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
             ThreadPoolExecutor sender = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
+            RequestHandler rh = new RequestHandler("Приниматор", chan);
+            transmitter = new Transmitter("Отправлятор", chan, rh);
+            //buf = ByteBuffer.allocate(4*1024);
+            //buf.put(0, (byte) -84);
 
             while (true) {
-                selector.select();
-                Set<SelectionKey> selectedKeys = selector.selectedKeys();
-                Iterator<SelectionKey> iter = selectedKeys.iterator();
+/*                if (selector.select() > 0) {
+                    Set<SelectionKey> selectedKeys = selector.selectedKeys();
+                    Iterator<SelectionKey> iter = selectedKeys.iterator();
 
-                while (iter.hasNext()) {
-                    SelectionKey key = iter.next();
+                    while (iter.hasNext()) {
+                        SelectionKey key = iter.next();
 
-                    System.out.println(key);
-                    if (key.isReadable()) {
+                        System.out.println(key);
+                        if (key.isReadable()) {
+                            DatagramChannel channel = (DatagramChannel) key.channel();
+                            //executor.awaitTermination(1, TimeUnit.HOURS);*/
+                buf = ByteBuffer.allocate(4 * 1024);
+                synchronized (sync) {
+                    executor.execute(rh);
+                    sync.wait(1000);
 
-                        DatagramChannel channel = (DatagramChannel) key.channel();
-                        //executor.awaitTermination(1, TimeUnit.HOURS);
+                    SocketAddress check = rh.getFrom();//suka ka je ti xaebal
+                    if (check != null) {
+                        //System.out.println("loh");
+                        //buf = rh.getByteBuffer();
+                        //System.out.println(buf.get(0));
 
-                        ColThread colt = new ColThread("Исполнитель",  channel);
-
-
-                        //ее надо создавть только 5 раз
-
-                        RequestHandler rh = new RequestHandler("Приниматель",  selector, channel);
-
-
-                        Transmitter transmitter = new Transmitter("Отправлятель", channel);
-                        executor.execute(rh);
-                        colt.start();
-                        colt.join();
-                        sender.execute(transmitter);
-
-                        //executor.shutdown();
-
-
-
-
-                            /*str = SustemOut.sendTxt() + "\n$";
-                            printsmth(channel, from);*/
-
+                        //System.out.println(rh.getByteBuffer());
+                        //System.out.println(Thread.currentThread().getName());
+                        //valera.wait(1000);
+                        ServerThread serverThread = new ServerThread(chan, sender, transmitter, check, buf);
+                        serverThread.start();
+                        //serverThread.join();
                     }
-                    iter.remove();
                 }
-                //executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
             }
+                        /*executor.shutdown();
+                            str = SustemOut.sendTxt() + "\n$";
+                            printsmth(channel, from);*/
+                        /*}
+                        iter.remove();
+                    }
+                }*/
+                //executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
         }catch (IllegalAccessError e){
             SustemOut.println("Вийди звiдси розбiйник");
         }
@@ -165,12 +171,12 @@ public class ServerMain
                 ConnectionKeies.add(ACCESS);
                 SustemOut.addText("доступ открыт можете срать&"+ACCESS);
                 str = SustemOut.sendTxt()+"\n$";
-                printsmth(channel,from);
+                //printsmth(channel,from);
                 BDCHECKING=true;
 
             }
         }
-        if (BDCHECKING==false){
+        if (!BDCHECKING){
             SustemOut.addText("Неверный логин или пароль");
             str = SustemOut.sendTxt()+"\n$";
             //printsmth(channel,from);
@@ -289,7 +295,7 @@ public class ServerMain
             //  SustemOut.("Сервер получил сообщение со стороны клиента: "+val);
 
             try {
-                String userCommand[] = val.split("=");
+                String[] userCommand = val.split("=");
                 HashMap<String, String> fields = new HashMap<>();
                 if((userCommand[0].equals("update")) && (userCommand.length == 2)){
                     Stream<Person> personStream = CU.getCT().GetCollection().stream();
@@ -326,7 +332,19 @@ public class ServerMain
         CU.setResponse("");
     }
 
-
+    private static void sendToAll(String s, DatagramChannel channel, String login){
+        ByteBuffer kek = ByteBuffer.wrap((s+"\n$").getBytes());
+        addressMap.forEach((k,v) -> {
+            try {
+                if(!(k.equals(login))) {
+                    //System.out.println(v);
+                    channel.send(kek, v);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
 
     //tut o4evidno
     private static CommandA deserialize(byte[] data){
@@ -346,65 +364,68 @@ public class ServerMain
     {
         private String name;
         private DatagramChannel channel;
-
-
-
-
-
-        public RequestHandler(String name, Selector selector_, DatagramChannel channel_)
+        private ByteBuffer byteBuffer;
+        private SocketAddress from;
+        public RequestHandler(String name, DatagramChannel channel_)
         {
             this.channel=channel_;
             this.name = name;
             System.out.println("Андрей лох");
         }
 
-        public ByteBuffer getByteBuffer() {
-            return buffer;
-        }
         public Log4J2 getSustemOut() {
             return SustemOut;
         }
 
-
+        public ByteBuffer getByteBuffer() {
+            return byteBuffer;
+        }
 
         @Override
         public void run()
         {
-
-
-
             try {
-
+                    synchronized (checkBuffer){
                     synchronized (sync) {
-                        synchronized (buffer) {
-
-                            buffer.clear();
-                            buffer.put(new byte[4 * 1024]);
-                            buffer.clear();
-                            SustemOut.print("----Соеденение с клментом----");
-                            from = channel.receive(buffer);
-                            //sync.notify();
+                        //sleep(1000);
+                        buf.clear();
+                        buf.put(new byte[4 * 1024]);
+                        buf.clear();
+                        //SustemOut.print("----Соединение с клиентом----");
+                        from = channel.receive(buf);
+                        if (from != null) {
+                            sync.notify();
                             SustemOut.print("----Было успешно установлено----");
                         }
+                    }
                 }
 
             }
-            catch (IOException e)
+            catch (IOException/* | InterruptedException*/ e)
             {
                 e.printStackTrace();
             }
         }
+
+
+        public SocketAddress getFrom(){ return from;}
+
+        public void setFrom(SocketAddress from) {
+            this.from = from;
+        }
     }
 
-    static class Transmitter implements Runnable
-    {
+    static class Transmitter implements Runnable {
         private String name;
         private DatagramChannel channel;
+        private RequestHandler rh;
+        private SocketAddress from;
 
-        public Transmitter(String name, DatagramChannel chan)
+        public Transmitter(String name, DatagramChannel chan, RequestHandler rh)
         {
             this.name = name;
             this.channel = chan;
+            this.rh=rh;
         }
 
         public String getName() {
@@ -418,8 +439,8 @@ public class ServerMain
             {
                         str = SustemOut.sendTxt()+"\n$";
                         SustemOut.clear();
-                        ByteBuffer buf = ByteBuffer.wrap(str.getBytes());
-                        channel.send(buf, from);
+                        ByteBuffer buff = ByteBuffer.wrap(str.getBytes());
+                        channel.send(buff, from);
                         CU.setResponse("");
             }
             catch (IOException e)
@@ -427,41 +448,53 @@ public class ServerMain
                 e.printStackTrace();
             }
         }
+
+        public void setFrom(SocketAddress from) {
+            this.from = from;
+        }
     }
 
     static class ColThread extends Thread {
         private DatagramChannel channel;
-
+        private SocketAddress from;
+        private Map<String, SocketAddress> addressMap;
+        private ByteBuffer buffer;
         public ColThread(String name,
-                         DatagramChannel channel_)
-
-        {
+                         DatagramChannel channel_, SocketAddress from, Map<String, SocketAddress> map, ByteBuffer byteBuffer) {
             super(name);
             this.channel=channel_;
+            this.from=from;
+            this.addressMap=map;
+            this.buffer=byteBuffer;
             System.out.println("Макс лох");
         }
 
         public void run() {
 
-            synchronized (sync2) {
             synchronized (sync) {
                 try {
-                    sync.wait(500);
+                    //sync.wait(500);
+                    sleep(1000);
                     System.out.println("qwe");
+                    System.out.println(buffer.get(0));
                     ByteBuffer finalBuffer = ByteBuffer.allocate(buffer.position());
                     if (getNameCom(buffer, finalBuffer, from).equals("login")) {
                         if (getAccess(buffer, finalBuffer, from).equals("DEFAULT")) {
                             try {
                                 CheckLogin(bc.getCon(), channel, from, getLogin(buffer, finalBuffer, from), getPass(buffer, finalBuffer, from));
-                            } catch (SQLException throwables) {
+                                if(!addressMap.containsKey(getLogin(buffer, finalBuffer, from))){
+                                    addressMap.put(getLogin(buffer, finalBuffer, from), from);
+                                }
+                                sendToAll("На сервере появился "+getLogin(buffer, finalBuffer, from), channel, getLogin(buffer, finalBuffer, from));
+                                //System.out.println(getLogin(buffer, finalBuffer, from));
+
+                            } catch (SQLException | IOException throwables) {
                                 throwables.printStackTrace();
-                            } catch (IOException e) {
-                                e.printStackTrace();
                             }
                         } else {
 
                             SustemOut.addText("Ты уже тута");
-                            str = SustemOut.sendTxt() + "\n$";
+                            //str = SustemOut.sendTxt() + "\n$";
                             // printsmth(channel,from);
 
 
@@ -475,7 +508,7 @@ public class ServerMain
                         ACCESS = UUID.randomUUID().toString();
                         ConnectionKeies.add(ACCESS);
                         SustemOut.addText("доступ открыт можете срать&" + ACCESS);
-                        str = SustemOut.sendTxt() + "\n$";
+                        //str = SustemOut.sendTxt() + "\n$";
                         try {
                             printsmth(channel, from);
                         } catch (IOException e) {
@@ -489,16 +522,14 @@ public class ServerMain
                             if (Conkey.equals(getAccess(buffer, finalBuffer, from).trim())) {
                                 try {
                                     action(buffer, finalBuffer, channel, from);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                } catch (InterruptedException e) {
+                                } catch (IOException | InterruptedException e) {
                                     e.printStackTrace();
                                 }
                                 AUTHORIZATIONCHECK = true;
                             }
 
                         }
-                        if (AUTHORIZATIONCHECK == false) {
+                        if (!AUTHORIZATIONCHECK) {
                             SustemOut.addText("Пищов нахуй");
                             str = SustemOut.sendTxt() + "\n$";
                             //printsmth(channel,from);
@@ -507,6 +538,7 @@ public class ServerMain
                         AUTHORIZATIONCHECK = false;
 
                     }
+                    transmitter.setFrom(from);
                     //sync2.notify();
                     //okonchaiya obrabotci zaprosa
                     //start otveta clentu
@@ -514,7 +546,36 @@ public class ServerMain
                     e.printStackTrace();
                 }
             }
-            }
+        }
+    }
+    public static class ServerThread extends Thread{
+        private DatagramChannel datagramChannel;
+        private ThreadPoolExecutor sender;
+        private Transmitter tr;
+        private SocketAddress from;
+        private ByteBuffer buffer;
+        public ServerThread(DatagramChannel datagramChannel, ThreadPoolExecutor sender, Transmitter tr, SocketAddress from, ByteBuffer byteBuffer){
+            this.datagramChannel = datagramChannel;
+            this.sender=sender;
+            this.tr=tr;
+            this.from=from;
+            this.buffer=byteBuffer;
+            /*bufferThreadLocal.set(buffer);
+            System.out.println(buffer.get(0));
+            System.out.println(bufferThreadLocal.get().get(0));*/
+        }
+        public void run() {
+            System.out.println(buf.get(0));
+            //System.out.println(bufferThreadLocal.get().get(0));
+            ColThread colt = new ColThread("Исполнитель",  datagramChannel,from, addressMap, buffer);
+            colt.start();
+            /*executor.execute(rh);
+            executor.execute(rh);*/
+            try {
+                colt.join();
+            } catch (InterruptedException e) { e.printStackTrace(); }
+
+            sender.execute(tr);
         }
     }
 
