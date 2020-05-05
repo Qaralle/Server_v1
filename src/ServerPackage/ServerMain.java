@@ -47,7 +47,7 @@ public class ServerMain
     private static receiver CU;
     private static String str;
     private static boolean isRight=false;
-    private static List<String> ConnectionKeies= new ArrayList<>();
+    private static Map<String, Long> ConnectionKeies= new HashMap<>();
     private static ThreadLocal<SocketAddress> socketAddress=new ThreadLocal<>();
     //private static ThreadLocal<ByteBuffer> buf = new ThreadLocal<>();
     private static ByteBuffer buf;
@@ -91,7 +91,7 @@ public class ServerMain
                 collectionTask.load(bc);
                 CU = new CollectionUnit(collectionTask, bc);
             }catch (NullPointerException ex) {
-                System.out.println("отцувкпитовтодтоывмиа");
+                System.out.println("Как вы это сделали?");
             }
             ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
             ThreadPoolExecutor sender = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
@@ -168,12 +168,15 @@ public class ServerMain
         while (rs.next()) {
             if ((rs.getString(2).equals(login))&&(sCryptPasswordEncoder.matches(pass,rs.getString(3)))){
                 ACCESS=UUID.randomUUID().toString();
-                ConnectionKeies.add(ACCESS);
-                SustemOut.addText("доступ открыт можете срать&"+ACCESS);
-                str = SustemOut.sendTxt()+"\n$";
+                ConnectionKeies.put(ACCESS, System.currentTimeMillis());
+                SustemOut.addText("Доступ открыт&"+ACCESS);
+                //str = SustemOut.sendTxt()+"\n$";
                 //printsmth(channel,from);
                 BDCHECKING=true;
-
+                if (!addressMap.containsKey(login)) {
+                    addressMap.put(login, from);
+                }
+                sendToAll("На сервере появился " + login, channel, login);
             }
         }
         if (!BDCHECKING){
@@ -337,7 +340,6 @@ public class ServerMain
         addressMap.forEach((k,v) -> {
             try {
                 if(!(k.equals(login))) {
-                    //System.out.println(v);
                     channel.send(kek, v);
                 }
             } catch (IOException e) {
@@ -370,7 +372,6 @@ public class ServerMain
         {
             this.channel=channel_;
             this.name = name;
-            System.out.println("Андрей лох");
         }
 
         public Log4J2 getSustemOut() {
@@ -391,10 +392,10 @@ public class ServerMain
                         buf.clear();
                         buf.put(new byte[4 * 1024]);
                         buf.clear();
-                        //SustemOut.print("----Соединение с клиентом----");
                         from = channel.receive(buf);
                         if (from != null) {
                             sync.notify();
+                            SustemOut.print("----Соединение с клиентом----");
                             SustemOut.print("----Было успешно установлено----");
                         }
                     }
@@ -466,85 +467,74 @@ public class ServerMain
             this.from=from;
             this.addressMap=map;
             this.buffer=byteBuffer;
-            System.out.println("Макс лох");
         }
 
         public void run() {
 
             synchronized (sync) {
-                try {
-                    //sync.wait(500);
-                    sleep(1000);
-                    System.out.println("qwe");
-                    System.out.println(buffer.get(0));
-                    ByteBuffer finalBuffer = ByteBuffer.allocate(buffer.position());
-                    if (getNameCom(buffer, finalBuffer, from).equals("login")) {
-                        if (getAccess(buffer, finalBuffer, from).equals("DEFAULT")) {
-                            try {
-                                CheckLogin(bc.getCon(), channel, from, getLogin(buffer, finalBuffer, from), getPass(buffer, finalBuffer, from));
-                                if(!addressMap.containsKey(getLogin(buffer, finalBuffer, from))){
-                                    addressMap.put(getLogin(buffer, finalBuffer, from), from);
-                                }
-                                sendToAll("На сервере появился "+getLogin(buffer, finalBuffer, from), channel, getLogin(buffer, finalBuffer, from));
-                                //System.out.println(getLogin(buffer, finalBuffer, from));
-
-                            } catch (SQLException | IOException throwables) {
-                                throwables.printStackTrace();
-                            }
-                        } else {
-
-                            SustemOut.addText("Ты уже тута");
-                            //str = SustemOut.sendTxt() + "\n$";
-                            // printsmth(channel,from);
-
-
-                        }
-                    } else if (getNameCom(buffer, finalBuffer, from).equals("sign_up")) {
+                ByteBuffer finalBuffer = ByteBuffer.allocate(buffer.position());
+                if (getNameCom(buffer, finalBuffer, from).equals("login")) {
+                    if (getAccess(buffer, finalBuffer, from).equals("DEFAULT")) {
                         try {
-                            insert(bc.getCon(), getLogin(buffer, finalBuffer, from), sCryptPasswordEncoder.encode(getPass(buffer, finalBuffer, from)));
-                        } catch (SQLException throwables) {
+                            CheckLogin(bc.getCon(), channel, from, getLogin(buffer, finalBuffer, from), getPass(buffer, finalBuffer, from));
+                            //System.out.println(getLogin(buffer, finalBuffer, from));
+                        } catch (SQLException | IOException throwables) {
                             throwables.printStackTrace();
                         }
-                        ACCESS = UUID.randomUUID().toString();
-                        ConnectionKeies.add(ACCESS);
-                        SustemOut.addText("доступ открыт можете срать&" + ACCESS);
-                        //str = SustemOut.sendTxt() + "\n$";
-                        try {
-                            printsmth(channel, from);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-
                     } else {
+                        ConnectionKeies.replace(getAccess(buffer, finalBuffer, from).trim(), System.currentTimeMillis());
+                        SustemOut.addText("Ты уже тута");
+                        //str = SustemOut.sendTxt() + "\n$";
+                        // printsmth(channel,from);
+                    }
+                } else if (getNameCom(buffer, finalBuffer, from).equals("sign_up")) {
+                    try {
+                        insert(bc.getCon(), getLogin(buffer, finalBuffer, from), sCryptPasswordEncoder.encode(getPass(buffer, finalBuffer, from)));
+                    } catch (SQLException throwables) {
+                        throwables.printStackTrace();
+                    }
+                    ACCESS = UUID.randomUUID().toString();
+                    ConnectionKeies.put(ACCESS, System.currentTimeMillis());
+                    SustemOut.addText("Доступ открыт&"+ACCESS);
+                    //str = SustemOut.sendTxt() + "\n$";
+                    /*try {
+                        printsmth(channel, from);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }*/
+                }else if(getNameCom(buffer, finalBuffer, from).equals("exit")) {
+                    if(!(getAccess(buffer, finalBuffer, from).equals("DEFAULT")))
+                        addressMap.remove(getLogin(buffer, finalBuffer, from));
+                        sendToAll("Сервер покинул " + getLogin(buffer, finalBuffer, from), channel, getLogin(buffer, finalBuffer, from));
+                }else {
 
-
-                        for (String Conkey : ConnectionKeies) {
-                            if (Conkey.equals(getAccess(buffer, finalBuffer, from).trim())) {
-                                try {
-                                    action(buffer, finalBuffer, channel, from);
-                                } catch (IOException | InterruptedException e) {
-                                    e.printStackTrace();
-                                }
+                        ConnectionKeies.forEach((k,v) -> {
+                            if (k.equals(getAccess(buffer, finalBuffer, from).trim())) {
+                                /*System.out.println(System.currentTimeMillis());
+                                System.out.println(v);*/
+                                if ((System.currentTimeMillis()-v)<90000) {
+                                    try {
+                                        action(buffer, finalBuffer, channel, from);
+                                        ConnectionKeies.replace(k, System.currentTimeMillis());
+                                    } catch (IOException | InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                }else SustemOut.addText("Вы бездействовали более 1,5 минуты. Пожалуйста, авторизуйтесь повторно");
                                 AUTHORIZATIONCHECK = true;
                             }
-
-                        }
+                        });
                         if (!AUTHORIZATIONCHECK) {
-                            SustemOut.addText("Пищов нахуй");
+                            SustemOut.addText("Авторизуйтесь для выполнения команд");
                             str = SustemOut.sendTxt() + "\n$";
                             //printsmth(channel,from);
-
                         }
                         AUTHORIZATIONCHECK = false;
+                }
+                transmitter.setFrom(from);
 
-                    }
-                    transmitter.setFrom(from);
                     //sync2.notify();
                     //okonchaiya obrabotci zaprosa
                     //start otveta clentu
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
         }
     }
@@ -565,7 +555,7 @@ public class ServerMain
             System.out.println(bufferThreadLocal.get().get(0));*/
         }
         public void run() {
-            System.out.println(buf.get(0));
+            //System.out.println(buf.get(0));
             //System.out.println(bufferThreadLocal.get().get(0));
             ColThread colt = new ColThread("Исполнитель",  datagramChannel,from, addressMap, buffer);
             colt.start();
