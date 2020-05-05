@@ -68,14 +68,9 @@ public abstract class Terminal {
         this.res=rec_;
     }
     /**
-
      * перейти в интерактивный режим
-
      * @throws FileNotFoundException файл не найден
-
      */
-
-
     public void startWorking(String del) throws FileNotFoundException {
         while (true) {
             if (scan.hasNextLine()) {

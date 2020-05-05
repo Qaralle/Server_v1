@@ -43,7 +43,7 @@ public class FileTerminal extends Terminal {
 
         executeScript = new ExecuteScript(new FileTransporter(scan));
 
-        exit=new Exit();
+        //exit=new Exit();
         history=new History();
         addIfMin = new AddIfMin(new FileTransporter(scan));
         help=new Help();

@@ -30,6 +30,10 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
+/**
+ * Основной класс, реализующий сервер
+ * @author Maxim Antonov and Andrey Lyubkin
+ */
 public class ServerMain
 {
 
@@ -68,6 +72,11 @@ public class ServerMain
             parallelization,
             keyLength,
             saltLength);
+
+    /**
+     * Метод, выполняющий запуск сервера
+     * @param args
+     */
     public static void main(String args[]) throws Exception
     {
 
@@ -149,6 +158,14 @@ public class ServerMain
 
 
     //dlya zapisi v BD
+
+    /**
+     * Запись нового пользователя в БД
+     * @param con Соединение с БД
+     * @param Login Логин пользователя
+     * @param Pass Пароль пользователя
+     * @throws SQLException
+     */
     private synchronized static void insert(Connection con, String Login, String Pass) throws SQLException {
         PreparedStatement stmt = con.prepareStatement("INSERT INTO JC_CONTACT (LOGIN,pass) VALUES (?, ?)");
         stmt.setString(1, Login);
@@ -162,6 +179,15 @@ public class ServerMain
 
 
     //Dlya proverki logina po pd
+
+    /**
+     * Авторизация пользователя
+     * @param con Соединение с БД
+     * @param channel Канал для отправки ответа клиенту
+     * @param from Адрес клиента
+     * @param login Логин клиента
+     * @param pass Пароль клиента
+     */
     private synchronized static void CheckLogin(Connection con, DatagramChannel channel, SocketAddress from, String login, String pass) throws SQLException, IOException {
         Statement stmt = con.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT * FROM JC_CONTACT");
@@ -195,6 +221,13 @@ public class ServerMain
 
     //hui ego znaet tip perepisivaem 4to poluchii v drugoi buffer
     //da eto kostyl shob ne bilo lishnih nullov
+
+    /**
+     * Метод, выполняющий преобразование исходного буфера в пригодный для дальнейшей работы
+     * @param buffer Исходный буфер
+     * @param finalBuffer Буфер, куда будет записано все необходимое из исходного
+     * @return Измененный финальный буфер
+     */
     private static ByteBuffer getFinalBuffer(ByteBuffer buffer, ByteBuffer finalBuffer){
         for (int i = 0; i < buffer.position(); ++i){
             finalBuffer.put(i, buffer.get(i));
@@ -205,6 +238,14 @@ public class ServerMain
 
 
     //poluchenie logina
+
+    /**
+     * Получение логина пользователя из запроса
+     * @param buffer Исходный буфер
+     * @param finalBuffer Буфер для дальнейшей работы
+     * @param from Адрес пользователя
+     * @return Логин
+     */
     private static String getLogin(ByteBuffer buffer,ByteBuffer finalBuffer, SocketAddress from){
 
         ByteBuffer finalBuffer_=getFinalBuffer(buffer,finalBuffer);
@@ -219,6 +260,14 @@ public class ServerMain
 
 
     //poluchenie logina
+
+    /**
+     * Получение пароля пользователя из запроса
+     * @param buffer Исходный буфер
+     * @param finalBuffer Буфер для дальнейшей работы
+     * @param from Адрес пользователя
+     * @return Пароль
+     */
     private static String getPass(ByteBuffer buffer,ByteBuffer finalBuffer, SocketAddress from){
 
         ByteBuffer finalBuffer_=getFinalBuffer(buffer,finalBuffer);
@@ -232,6 +281,13 @@ public class ServerMain
     }
 
     //HZ KAK TUT IZBEJAT DUBLIROVANIya potom eshe podumau
+    /**
+     * Получение токена пользователя из запроса
+     * @param buffer Исходный буфер
+     * @param finalBuffer Буфер для дальнейшей работы
+     * @param from Адрес пользователя
+     * @return Токен
+     */
     private static String getAccess(ByteBuffer buffer,ByteBuffer finalBuffer, SocketAddress from){
 
         ByteBuffer finalBuffer_=getFinalBuffer(buffer,finalBuffer);
@@ -245,6 +301,13 @@ public class ServerMain
     }
 
     //polucheniya imya comandi
+    /**
+     * Получение названия команды пользователя из запроса
+     * @param buffer Исходный буфер
+     * @param finalBuffer Буфер для дальнейшей работы
+     * @param from Адрес пользователя
+     * @return Название команды
+     */
     public static String getNameCom(ByteBuffer buffer,ByteBuffer finalBuffer, SocketAddress from){
         ByteBuffer finalBuffer_=getFinalBuffer(buffer,finalBuffer);
         if (from != null) {
@@ -258,6 +321,16 @@ public class ServerMain
 
 
     //dlya raboti s kollekciei
+
+    /**
+     * Основной метод, реализующий выполнение команды пользователя
+     * @param buffer Исходный буфер
+     * @param finalBuffer Буфер для дальнейшей работы
+     * @param from Адрес пользователя
+     * @param channel Канал откуда пришел запрос
+     * @throws IOException
+     * @throws InterruptedException
+     */
     private synchronized static void action(ByteBuffer buffer,ByteBuffer finalBuffer, DatagramChannel channel,SocketAddress from) throws IOException, InterruptedException {
 
 
@@ -327,14 +400,20 @@ public class ServerMain
     }
 
 
-    //visrat 4to-to clientu
+    /*visrat 4to-to clientu
     private static void printsmth(DatagramChannel channel, SocketAddress from) throws IOException {
         SustemOut.clear();
         ByteBuffer lol = ByteBuffer.wrap(str.getBytes());
         channel.send(lol, from);
         CU.setResponse("");
-    }
+    }*/
 
+    /**
+     * Отправка информации всем авторизованным пользователям кроме отправителя запроса
+     * @param s Строка, которую нужно отправить
+     * @param channel Канал для отправки
+     * @param login Логин, на который не нужно отправлять (автор запроса)
+     */
     private static void sendToAll(String s, DatagramChannel channel, String login){
         ByteBuffer kek = ByteBuffer.wrap((s+"\n$").getBytes());
         addressMap.forEach((k,v) -> {
@@ -349,6 +428,12 @@ public class ServerMain
     }
 
     //tut o4evidno
+
+    /**
+     * Десериализация запроса
+     * @param data Исходный массив
+     * @return Команда пользователя
+     */
     private static CommandA deserialize(byte[] data){
 
         try {
@@ -362,6 +447,9 @@ public class ServerMain
         return null;
     }
 
+    /**
+     * Класс, реализующий поток чтения запросов
+     */
     static class RequestHandler extends Thread
     {
         private String name;
@@ -416,6 +504,9 @@ public class ServerMain
         }
     }
 
+    /**
+     * Класс, реализующий поток отправки ответов пользователям
+     */
     static class Transmitter implements Runnable {
         private String name;
         private DatagramChannel channel;
@@ -455,6 +546,9 @@ public class ServerMain
         }
     }
 
+    /**
+     * Класс, реализующий поток обработки запроса пользователя
+     */
     static class ColThread extends Thread {
         private DatagramChannel channel;
         private SocketAddress from;
@@ -489,13 +583,25 @@ public class ServerMain
                     }
                 } else if (getNameCom(buffer, finalBuffer, from).equals("sign_up")) {
                     try {
-                        insert(bc.getCon(), getLogin(buffer, finalBuffer, from), sCryptPasswordEncoder.encode(getPass(buffer, finalBuffer, from)));
+                        boolean b = true;
+                        Statement stmt = bc.getCon().createStatement();
+                        ResultSet rs = stmt.executeQuery("SELECT * FROM JC_CONTACT");
+                        while (rs.next()) {
+                            if (rs.getString(2).equals(getLogin(buffer, finalBuffer, from))){
+                                SustemOut.addText("Этот логин уже используется. Пожалуйста, используйте другой");
+                                b = false;
+                                break;
+                            }
+                        }if(b) {
+                            insert(bc.getCon(), getLogin(buffer, finalBuffer, from), sCryptPasswordEncoder.encode(getPass(buffer, finalBuffer, from)));
+                            ACCESS = UUID.randomUUID().toString();
+                            ConnectionKeies.put(ACCESS, System.currentTimeMillis());
+                            SustemOut.addText("Доступ открыт&"+ACCESS);
+                        }
                     } catch (SQLException throwables) {
                         throwables.printStackTrace();
                     }
-                    ACCESS = UUID.randomUUID().toString();
-                    ConnectionKeies.put(ACCESS, System.currentTimeMillis());
-                    SustemOut.addText("Доступ открыт&"+ACCESS);
+
                     //str = SustemOut.sendTxt() + "\n$";
                     /*try {
                         printsmth(channel, from);
@@ -506,12 +612,17 @@ public class ServerMain
                     if(!(getAccess(buffer, finalBuffer, from).equals("DEFAULT")))
                         addressMap.remove(getLogin(buffer, finalBuffer, from));
                         sendToAll("Сервер покинул " + getLogin(buffer, finalBuffer, from), channel, getLogin(buffer, finalBuffer, from));
+                }
+                else if(getNameCom(buffer, finalBuffer, from).equals("help")) {
+                    try {
+                        action(buffer, finalBuffer, channel, from);
+                    } catch (IOException | InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }else {
 
                         ConnectionKeies.forEach((k,v) -> {
                             if (k.equals(getAccess(buffer, finalBuffer, from).trim())) {
-                                /*System.out.println(System.currentTimeMillis());
-                                System.out.println(v);*/
                                 if ((System.currentTimeMillis()-v)<90000) {
                                     try {
                                         action(buffer, finalBuffer, channel, from);
@@ -538,6 +649,10 @@ public class ServerMain
             }
         }
     }
+
+    /**
+     * Всопмогательный класс для многопоточной обработки запросов. Необходим для избежания ошибок во время обработки нескольких запросов одновременно
+     */
     public static class ServerThread extends Thread{
         private DatagramChannel datagramChannel;
         private ThreadPoolExecutor sender;

@@ -83,7 +83,7 @@ public class CollectionTask {
         filterStartsWithName=new FilterStartsWithName(new ConsoleTransporter());
         //save=new Save();
         executeScript = new ExecuteScript(new ConsoleTransporter());
-        exit=new Exit();
+        //exit=new Exit();
         history=new History();
         addIfMin = new AddIfMin(new ConsoleTransporter());
         help=new Help();
@@ -107,7 +107,10 @@ public class CollectionTask {
         commandMap.put("count_less_than_location", countLessThanLocation);
     }
 
-
+    /**
+     * Загрузка коллекции из БД
+     * @param bd Объект класса BDconnector для подключения к БД
+     */
     public void load(BDconnector bd){
         /*Scanner scanner = new Scanner(new File(pathname));
         System.out.println("Collection loading");

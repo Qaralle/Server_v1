@@ -9,6 +9,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
+/**
+ * Класс, реализующий подключение к базе данных
+ */
 public class BDconnector {
     private String strSshUser = "s283809"; // SSH loging username
     private String strSshPassword = "hzn178"; // SSH login password
@@ -39,6 +42,16 @@ public class BDconnector {
         }
     }
 
+    /**
+     * Создание SSH туннеля для подключения к БД
+     * @param strSshUser Имя пользователя
+     * @param strSshPassword Пароль пользователя
+     * @param strSshHost имя хоста сервера
+     * @param nSshPort Порт для подключения
+     * @param strRemoteHost Название хоста
+     * @param nLocalPort Локальный порт для подключения к туннелю
+     * @param nRemotePort Порт вашей БД
+     */
     private void doSshTunnel( String strSshUser, String strSshPassword, String strSshHost, int nSshPort, String strRemoteHost, int nLocalPort, int nRemotePort ) throws JSchException
     {
         final JSch jsch = new JSch();

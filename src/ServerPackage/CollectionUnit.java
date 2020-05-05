@@ -309,13 +309,11 @@ public class CollectionUnit implements receiver {
         FileTerminal ft = new FileTerminal(file_name, new Scanner(new File(file_name)), this);
     }
 
-    /**
-     * реализация команды exit
-     */
+/*
     @Override
     public void exit() {
         System.exit(0);
-    }
+    }*/
 
     /**
      * реализация команды history
@@ -377,7 +375,6 @@ public class CollectionUnit implements receiver {
         response += "\n" + "update: Обновить данные элемента с заданным id коллекции. Синтаксис: update id";
         response += "\n" + "remove_by_id: Удалить элемент с заданным id из коллекции. Синтаксис: remove_by_id id";
         response += "\n" + "clear: Очистить коллекцию";
-        response += "\n" + "save: Сохранить коллекцию в файл";
         response += "\n" + "execute_script: Выполнить скрипт, записанный в файл. Синтаксис: execute_script filename";
         response += "\n" + "exit: Завершить программу";
         response += "\n" + "remove_head: Удалить первый элемент коллекции";
@@ -386,6 +383,8 @@ public class CollectionUnit implements receiver {
         response += "\n" + "remove_any_by_nationality: Удалить один элемент коллекции, с заданной национальностью. Синтаксис: remove_any_by_nationality nationality";
         response += "\n" + "count_less_than_location: Вывести количество элементов коллекции, значения поля location которых меньше заданного. Синтаксис: count_less_than_location location";
         response += "\n" + "filter_starts_with_name: Вывести элементы коллекции, имя которых начинается с заданной подстроки. Синтаксис: filter_starts_with_name string";
+        response += "\n" + "login: Войти в систему. Синтаксис: login username password";
+        response += "\n" + "sign_up: Зарегистрироваться и войти в систему. Синтаксис: sign_up username password";
         response += "\n" + "Все команды, синтаксис которых не обозначен в описании команды вводятся просто вводом названия команды без каких-либо символов после них.";
         SystemOut.addText(response);
     }
@@ -422,6 +421,19 @@ public class CollectionUnit implements receiver {
     @Override
     public String getLogin() { return login; }
 
+    /**
+     * Запись нового Person в БД
+     * @param name_ имя
+     * @param height_ рост
+     * @param eyeColor_ цвет глаз
+     * @param hairColor_ цвет волос
+     * @param nationality_ национальность
+     * @param x_ координата х
+     * @param y_ координата у
+     * @param x1_ координата х локации
+     * @param y1_ координата у локации
+     * @param name1_ название локации
+     */
     private void addToBD(String name_, Double height_, Color eyeColor_, Color hairColor_, Country nationality_, Float x_, Double y_, Float x1_, double y1_, String name1_) throws SQLException {
         PreparedStatement stmt = con.prepareStatement("INSERT INTO collection (name, x, y, height, eyecolor, haircolor, locationname, locationx, locationy, country, creator)" +
                 " VALUES (?,?,?,?,?,?,?,?,?,?,?)");
@@ -439,7 +451,20 @@ public class CollectionUnit implements receiver {
         stmt.executeUpdate();
         stmt.close();
     }
-
+    /**
+     * Изменение существующего объекта в БД
+     * @param id ID объекта, который нужно изменить
+     * @param nameP_ имя
+     * @param height_ рост
+     * @param eyeColor_ цвет глаз
+     * @param hairColor_ цвет волос
+     * @param nationality_ национальность
+     * @param x_ координата х
+     * @param y_ координата у
+     * @param x1_ координата х локации
+     * @param y1_ координата у локации
+     * @param nameL_ название локации
+     */
     private void updateBD(long id, String nameP_, Double height_, Color eyeColor_, Color hairColor_, Country nationality_, Float x_, Double y_, Float x1_, double y1_, String nameL_) throws SQLException{
         PreparedStatement stmt = con.prepareStatement("update collection set name=?, x=?, y=?, height=?, eyecolor=?, haircolor=?, locationname=?, locationx=?, locationy=?, country=? where id = ?");
         stmt.setString(1, nameP_);
@@ -457,6 +482,15 @@ public class CollectionUnit implements receiver {
         stmt.close();
     }
 
+    /**
+     * Создание объекта класса Person
+     * @param x_ координата х
+     * @param y_ координата у
+     * @param x1_ координата х локации
+     * @param y1_ координата у локации
+     * @param name1_ название локации
+     * @return Готовый объект класса Person с заданными координатами, остальные поля задаются методом setEverything
+     */
     private Person createPerson(Float x_, Double y_, Float x1_, double y1_, String name1_){
         coo=cm.create();
         coo.SetX(x_);
