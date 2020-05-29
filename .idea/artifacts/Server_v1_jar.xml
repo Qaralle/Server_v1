@@ -5,7 +5,6 @@
       <element id="archive" name="Server_v1.jar">
         <element id="module-output" name="Server_v1" />
       </element>
-      <element id="library" level="project" name="bcprov-jdk15on-1.65" />
     </root>
   </artifact>
 </component>

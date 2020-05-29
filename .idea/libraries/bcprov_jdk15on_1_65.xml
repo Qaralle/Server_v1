@@ -1,13 +1,7 @@
 <component name="libraryTable">
   <library name="bcprov-jdk15on-1.65">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../../Libraries_Java/bcprov-jdk15on-1.65.jar!/" />
-      <root url="jar://$PROJECT_DIR$/../../Libraries_Java/ColClass.jar!/" />
-      <root url="jar://$PROJECT_DIR$/../../Libraries_Java/commons-logging-1.1.1-api.jar!/" />
-      <root url="jar://$PROJECT_DIR$/../../Libraries_Java/gson-2.8.5.jar!/" />
-      <root url="jar://$PROJECT_DIR$/../../Libraries_Java/jsch-0.1.54.jar!/" />
-      <root url="jar://$PROJECT_DIR$/../../Libraries_Java/postgresql-42.2.12 (1).jar!/" />
-      <root url="jar://$PROJECT_DIR$/../../Libraries_Java/spring-security-core-5.2.1.RELEASE.jar!/" />
+      <root url="jar://D:/tests/bcprov-jdk15on-1.65.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

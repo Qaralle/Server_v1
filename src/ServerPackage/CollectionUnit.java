@@ -78,8 +78,8 @@ public class CollectionUnit implements receiver {
 
         try{
             addToBD(name_, height_, eyeColor_, hairColor_, nationality_, coo.getX(), coo.getY(), loc.getX(), loc.getY(), loc.getName());
-            ct.add(per);
-            System.out.println(ct.GetCollection().get(ct.GetCollection().size() - 1).getName());
+
+            ct.load(bDconnector);
             response = "Element added";
             SystemOut.addText(response);
         }catch (SQLException ex) {ex.printStackTrace();}
@@ -189,11 +189,21 @@ public class CollectionUnit implements receiver {
             stmt.setString(2, login);
             stmt.executeUpdate();
             stmt.close();
-            personStream = ct.GetCollection().stream();
-            if(personStream.peek(person -> per = person).filter(person -> person.getCreator().equals(login)).anyMatch(person -> person.getId() == id)) {
-                ct.GetCollection().remove(per);
-                response = "Удален объект с айди = "+id;
-            }else response = "Не удалось удалить объект";
+
+            Iterator<Person> it = ct.GetCollection().iterator();
+            while (it.hasNext()){
+                Person p = it.next();
+                if(p.getCreator().equals(login) && (p.getId()==id)){
+                    it.remove();
+                    response="Удален пипл айди = "+id +"\n";
+                    break;
+                }
+            }
+            if (response.equals("")){
+                response="Неудалось удолить объект\n";
+            }
+
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -243,8 +253,10 @@ public class CollectionUnit implements receiver {
             personStream = ct.GetCollection().stream();
             if(personStream.peek(person -> per = person).filter(person -> person.getCreator().equals(login)).anyMatch(person -> person.getNationality() == nationality)) {
                 ct.GetCollection().remove(per);
+
                 response = "Удален объект с национальностью = "+nationality;
             }else response = "Вашего объекта с такой национальностью нет";
+
         }catch (SQLException ex) {ex.printStackTrace();}
         SystemOut.addText(response);
     }
@@ -353,7 +365,7 @@ public class CollectionUnit implements receiver {
                 fp.PersonReplace(per);
                 try{
                     addToBD(name_, height_, eyeColor_, hairColor_, nationality_, coo.getX(), coo.getY(), loc.getX(), loc.getY(), loc.getName());
-                    ct.add(per);
+                    ct.load(bDconnector);
                     response = "Элемент добавлен!";
                 }catch (SQLException ex) {ex.printStackTrace();}
             }
@@ -450,6 +462,7 @@ public class CollectionUnit implements receiver {
         stmt.setString(11, login);
         stmt.executeUpdate();
         stmt.close();
+
     }
     /**
      * Изменение существующего объекта в БД

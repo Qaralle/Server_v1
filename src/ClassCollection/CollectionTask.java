@@ -1,6 +1,5 @@
 package ClassCollection;
 
-import ServerPackage.BDconnector;
 import ServerPackage.PersonList;
 import packet.*;
 import ServerPackage.IWillNameItLater.ConsoleTransporter;
@@ -9,16 +8,11 @@ import ServerPackage.Сommands.*;
 //import com.google.gson.JsonSyntaxException;
 //import com.google.gson.reflect.TypeToken;
 
-import javax.swing.plaf.nimbus.State;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
-import java.util.stream.Stream;
 
 /**
  * Класс, создающий коллекцию из Json.
@@ -154,6 +148,7 @@ public class CollectionTask {
             System.out.println("Коллекций успешно загружена");
         }*/
         Connection connection = bd.getCon();
+        collection = new PersonList();
 
         try {
             Statement statement = connection.createStatement();
@@ -179,7 +174,7 @@ public class CollectionTask {
                     hairColor = Color.valueOf(resultSet.getString("haircolor").toUpperCase());
                 }catch (NullPointerException ex) {}
                 p.setEverything(name, coo, height, eyeColor, hairColor, nationality, loc);
-                if(!collection.contains(p)) {
+                if(!(collection.contains(p))) {
                     np.ReplaceEverything(p, p.getCoordinates(), p.getLocation());
                     fp.ReplaceEverything(p, p.getLocation(), p.getCoordinates());
                     collection.add(p);

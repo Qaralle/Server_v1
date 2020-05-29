@@ -4,6 +4,7 @@ package ServerPackage;
 import ClassCollection.CollectionTask;
 import com.sun.security.ntlm.Server;
 import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder;
+import packet.BDconnector;
 import packet.CommandA;
 import packet.Person;
 import ServerPackage.IWillNameItLater.WrongTypeOfFieldException;
@@ -83,7 +84,7 @@ public class ServerMain
 
         sync = new Object();
         valera = new Object();
-        bc =new BDconnector();
+        bc =new BDconnector(3746);
 
         try {
 
@@ -474,7 +475,7 @@ public class ServerMain
         public void run()
         {
             try {
-                    synchronized (checkBuffer){
+                synchronized (checkBuffer){
                     synchronized (sync) {
                         //sleep(1000);
                         buf.clear();
@@ -623,14 +624,13 @@ public class ServerMain
 
                         ConnectionKeies.forEach((k,v) -> {
                             if (k.equals(getAccess(buffer, finalBuffer, from).trim())) {
-                                if ((System.currentTimeMillis()-v)<90000) {
+
                                     try {
                                         action(buffer, finalBuffer, channel, from);
                                         ConnectionKeies.replace(k, System.currentTimeMillis());
                                     } catch (IOException | InterruptedException e) {
                                         e.printStackTrace();
                                     }
-                                }else SustemOut.addText("Вы бездействовали более 1,5 минуты. Пожалуйста, авторизуйтесь повторно");
                                 AUTHORIZATIONCHECK = true;
                             }
                         });

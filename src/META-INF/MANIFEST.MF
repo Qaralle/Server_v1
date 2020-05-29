@@ -1,6 +1,8 @@
 Manifest-Version: 1.0
 Main-Class: ServerPackage.ServerMain
-Class-Path: bcprov-jdk15on-1.65.jar ColClass.jar commons-logging-1.1.1-a
- pi.jar gson-2.8.5.jar jsch-0.1.54.jar postgresql-42.2.12 (1).jar spring
- -security-core-5.2.1.RELEASE.jar
+Class-Path: bcprov-jdk15on-1.65.jar ColClass.jar commons-logging-1.1.1-1
+ .0.0.jar gson-2.8.5.jar jsch-0.1.54.jar postgresql-42.2.12.jar spring-s
+ ecurity-core-5.2.1.RELEASE.jar ColClass.jar gson-2.8.5.jar jsch-0.1.54.
+ jar postgresql-42.2.12.jar bcprov-jdk15on-1.65.jar commons-logging-1.1.
+ 1-1.0.0.jar spring-security-core-5.2.1.RELEASE.jar
 
