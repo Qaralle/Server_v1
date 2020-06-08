@@ -84,7 +84,7 @@ public class ServerMain
 
         sync = new Object();
         valera = new Object();
-        bc =new BDconnector(3746);
+        bc =new BDconnector(3748);
 
         try {
 
@@ -348,7 +348,7 @@ public class ServerMain
 
             }else if ((val.equals("update")) && (!isRight)){
                 val=cam.gettoUpdate_s();
-                isRight=false;
+                isRight=true;
             }
             if (val.equals("remove_by_id")){
                 val=cam.getToremove();
@@ -379,7 +379,8 @@ public class ServerMain
                     if(personStream.anyMatch(person -> person.getId() == Long.parseLong(userCommand[1]))){
                         SustemOut.addText("Объект с таким id найден"+"\n");
                         isRight=true;
-                    }else SustemOut.addText("Объект с таким id не найден"+"\n");
+                    }else {SustemOut.addText("Объект с таким id не найден"+"\n");
+                    isRight=false;}
                 }else {
                     for (int i = 1; i < userCommand.length; i += 2) {
                         fields.put(userCommand[i], userCommand[i + 1]);
@@ -576,7 +577,11 @@ public class ServerMain
                         } catch (SQLException | IOException throwables) {
                             throwables.printStackTrace();
                         }
-                    } else {
+                    }else if (getAccess(buffer, finalBuffer, from).equals("TEST"))
+                    {
+                        SustemOut.addText("Nice cock");
+                    }
+                    else {
                         ConnectionKeies.replace(getAccess(buffer, finalBuffer, from).trim(), System.currentTimeMillis());
                         SustemOut.addText("Ты уже тута");
                         //str = SustemOut.sendTxt() + "\n$";

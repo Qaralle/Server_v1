@@ -7,8 +7,16 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="ColClass" level="project" />
     <orderEntry type="library" name="commons-logging-1.1.1-1.0.0" level="project" />
     <orderEntry type="library" name="bcprov-jdk15on-1.65" level="project" />
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$USER_HOME$/3D Objects/ColClass_v1-master/out/artifacts/ColClass_jar/ColClass.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
   </component>
 </module>
